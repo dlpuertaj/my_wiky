@@ -1,0 +1,16 @@
+# Raw sources (large files, personal data — don't commit)
+raw/
+
+# Obsidian settings
+.obsidian/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
