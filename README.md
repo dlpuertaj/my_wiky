@@ -74,14 +74,36 @@ pip install pdfplumber beautifulsoup4 requests
 
 ## Usage
 
-### Setup
+This project supports two LLM backends. Use whichever fits your needs:
+
+| | Claude Code | Ollama (`brain.py`) |
+|---|---|---|
+| **Quality** | Best (Claude Opus/Sonnet) | Good (depends on model) |
+| **Vision** | Built-in (reads images directly) | Text-only (use `extract.py`) |
+| **Cost** | API usage | Free (local) |
+| **Speed** | Fast | Depends on hardware |
+| **Context** | 200k tokens | 8k-128k tokens |
+| **Interactive** | Conversational | CLI-based |
+
+---
+
+### Option A: Using Claude Code
+
+The recommended approach. Claude Code reads/writes files directly, handles
+all source types including images, and supports conversational ingest where
+you guide what to emphasize.
+
+#### Setup
 
 1. Open this directory in Obsidian as a vault.
 2. Open Claude Code in a terminal pointed at this directory.
 3. You now have the LLM on one side and Obsidian on the other. The LLM makes
    edits; you browse the results in real time.
 
-### Step 1: Ingest a Source
+The `CLAUDE.md` file in this repo is the schema — Claude Code reads it
+automatically and follows the workflows defined there.
+
+#### Ingest
 
 Drop a file into `raw/` and tell Claude to process it.
 
@@ -117,7 +139,7 @@ Claude reads images directly using vision — no extraction needed.
 
 A single source can touch 10-15 wiki pages.
 
-### Step 2: Ask Questions (Query)
+#### Query
 
 Ask anything against the accumulated wiki:
 
@@ -129,10 +151,9 @@ Ask anything against the accumulated wiki:
 
 Claude reads the wiki index, finds relevant pages, and synthesizes an answer
 with citations. Substantial answers (comparisons, analyses) are saved to
-`outputs/` and can be filed back into the wiki as map pages — so your
-explorations compound in the knowledge base just like ingested sources.
+`outputs/` and can be filed back into the wiki as map pages.
 
-### Step 3: Maintain the Wiki (Lint)
+#### Lint
 
 Periodically ask Claude to health-check the wiki:
 
@@ -140,13 +161,79 @@ Periodically ask Claude to health-check the wiki:
 > Please lint the wiki.
 ```
 
-Claude will:
-- Identify orphan pages with no inbound links.
-- Find concepts mentioned but lacking their own page.
-- Flag contradictions between pages.
-- Flag stale claims superseded by newer sources.
-- Suggest missing cross-references.
-- Suggest new sources to investigate for gaps.
+Claude will identify orphan pages, missing cross-references, contradictions,
+stale claims, and suggest new sources to investigate.
+
+---
+
+### Option B: Using Ollama (Local, Free)
+
+Run everything locally with open-source models via `brain.py`. No API key
+needed. Requires [Ollama](https://ollama.com) installed and running.
+
+#### Setup
+
+1. Install and start Ollama:
+   ```bash
+   ollama serve
+   ```
+
+2. Pull a model (recommended: `qwen2.5:7b` for 8GB+ VRAM, or `qwen3.5:4b`
+   for 6GB VRAM):
+   ```bash
+   ollama pull qwen2.5:7b
+   ```
+
+3. Open this directory in Obsidian as a vault.
+
+#### Ingest
+
+```bash
+# Text and markdown files
+python brain.py ingest raw/my-notes.txt
+
+# PDFs or HTML (extract first, then ingest)
+python scripts/extract.py raw/paper.pdf
+python brain.py ingest raw/paper.pdf
+
+# Web articles (extract first, then ingest)
+python scripts/extract.py https://example.com/article
+python brain.py ingest raw/example-com-article.extracted.md
+
+# Use a different model
+python brain.py ingest raw/notes.txt --model qwen2.5:7b
+```
+
+The agent will:
+1. Analyze the source and show you a summary with key takeaways.
+2. Pause and ask what you'd like to emphasize.
+3. Generate source summary, entity, and concept pages.
+4. Update `wiki/index.md` and `wiki/log.md`.
+
+**Note:** Images require a vision model. For 6GB VRAM, use Claude Code for
+images or describe the image content in a `.txt` file.
+
+#### Query
+
+```bash
+python brain.py query "What is spaced repetition?"
+python brain.py query "What contradictions exist about X?"
+```
+
+The agent searches the wiki index, reads relevant pages, and synthesizes an
+answer. You can save the answer to `outputs/` and optionally file it as a
+wiki map page.
+
+#### Lint
+
+```bash
+python brain.py lint
+```
+
+Checks for orphan pages, broken wikilinks, and uses the LLM to flag
+contradictions and suggest improvements.
+
+---
 
 ## Tips
 
@@ -161,6 +248,8 @@ Claude will:
   together with Claude. The schema is a living document.
 - **Use the log.** `wiki/log.md` gives you a timeline of everything that's
   happened. Useful for resuming after a break.
+- **Mix and match.** You can use Claude Code for high-quality ingest and
+  Ollama for quick queries, or vice versa. Both operate on the same wiki.
 
 ## Supported Source Formats
 
