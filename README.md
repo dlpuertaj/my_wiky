@@ -47,7 +47,8 @@ BRAIN/
 │   └── comparison-x-vs-y.md
 │
 └── scripts/
-    └── extract.py             # Text extractor for PDF, HTML, web URLs
+    ├── extract.py             # Text extractor for PDF, HTML, web URLs
+    └── kb.py                  # Ollama-backed interactive KB agent
 ```
 
 **Raw sources** — Your curated collection of source documents. Articles, papers,
@@ -76,14 +77,14 @@ pip install pdfplumber beautifulsoup4 requests
 
 This project supports two LLM backends. Use whichever fits your needs:
 
-| | Claude Code | Ollama (`brain.py`) |
+| | Claude Code | Ollama (`scripts/kb.py`) |
 |---|---|---|
 | **Quality** | Best (Claude Opus/Sonnet) | Good (depends on model) |
 | **Vision** | Built-in (reads images directly) | Text-only (use `extract.py`) |
 | **Cost** | API usage | Free (local) |
 | **Speed** | Fast | Depends on hardware |
-| **Context** | 200k tokens | 8k-128k tokens |
-| **Interactive** | Conversational | CLI-based |
+| **Context** | 200k tokens | Depends on model |
+| **Interface** | Conversational | Interactive REPL |
 
 ---
 
@@ -168,8 +169,13 @@ stale claims, and suggest new sources to investigate.
 
 ### Option B: Using Ollama (Local, Free)
 
-Run everything locally with open-source models via `brain.py`. No API key
+Run everything locally with open-source models via `scripts/kb.py`. No API key
 needed. Requires [Ollama](https://ollama.com) installed and running.
+
+`kb.py` is an interactive REPL agent. It gives the model five file-system
+tools — `list_notes`, `read_note`, `write_note`, `list_raw`, `read_raw` — and
+lets it autonomously read sources and write wiki pages in response to your
+natural-language instructions.
 
 #### Setup
 
@@ -178,60 +184,60 @@ needed. Requires [Ollama](https://ollama.com) installed and running.
    ollama serve
    ```
 
-2. Pull a model (recommended: `qwen2.5:7b` for 8GB+ VRAM, or `qwen3.5:4b`
-   for 6GB VRAM):
-   ```bash
-   ollama pull qwen2.5:7b
+2. Create the `kb_model` Modelfile (the script uses this model name by default).
+   Point it at a capable tool-calling model, e.g.:
    ```
+   FROM qwen2.5:7b
+   SYSTEM "You are a knowledge-base agent. Use the provided tools to read raw sources and maintain a wiki."
+   ```
+   Then build it:
+   ```bash
+   ollama create kb_model -f Modelfile
+   ```
+   You can also edit the `MODEL` variable at the top of `kb.py` to use any
+   Ollama model directly (e.g. `qwen2.5:7b`, `llama3.1:8b`).
 
 3. Open this directory in Obsidian as a vault.
 
-#### Ingest
+#### Usage
+
+Start the interactive agent:
 
 ```bash
-# Text and markdown files
-python brain.py ingest raw/my-notes.txt
-
-# PDFs or HTML (extract first, then ingest)
-python scripts/extract.py raw/paper.pdf
-python brain.py ingest raw/paper.pdf
-
-# Web articles (extract first, then ingest)
-python scripts/extract.py https://example.com/article
-python brain.py ingest raw/example-com-article.extracted.md
-
-# Use a different model
-python brain.py ingest raw/notes.txt --model qwen2.5:7b
+python scripts/kb.py
 ```
 
-The agent will:
-1. Analyze the source and show you a summary with key takeaways.
-2. Pause and ask what you'd like to emphasize.
-3. Generate source summary, entity, and concept pages.
-4. Update `wiki/index.md` and `wiki/log.md`.
+You'll get a `You:` prompt. Speak to the agent in natural language — it will
+call tools as needed to read sources and write wiki pages.
 
-**Note:** Images require a vision model. For 6GB VRAM, use Claude Code for
-images or describe the image content in a `.txt` file.
-
-#### Query
-
-```bash
-python brain.py query "What is spaced repetition?"
-python brain.py query "What contradictions exist about X?"
+**Ingest a source:**
+```
+You: Read raw/my-notes.txt and create wiki pages for the key entities and concepts.
+You: Summarize raw/paper.pdf.extracted.md and update the wiki index.
 ```
 
-The agent searches the wiki index, reads relevant pages, and synthesizes an
-answer. You can save the answer to `outputs/` and optionally file it as a
-wiki map page.
-
-#### Lint
-
-```bash
-python brain.py lint
+**Query the wiki:**
+```
+You: What do the notes say about spaced repetition?
+You: Summarize everything in the wiki about [topic].
 ```
 
-Checks for orphan pages, broken wikilinks, and uses the LLM to flag
-contradictions and suggest improvements.
+**Maintain the wiki:**
+```
+You: Review the wiki index and flag any orphan pages or missing cross-references.
+```
+
+**Exit:** `Ctrl+C`
+
+**Limitations vs Claude Code:**
+- `kb.py` operates on the **flat `wiki/` directory** only (no subdirectory
+  awareness — it won't automatically route pages to `wiki/sources/`,
+  `wiki/entities/`, etc. unless the model chooses to include that path in the
+  filename).
+- **Text only** — no vision support. Extract PDFs and HTML with `extract.py`
+  first; for images, use Claude Code or describe the image in a `.txt` file.
+- The agentic loop depth depends on the model's tool-calling capability.
+  Smaller models may need more explicit instructions.
 
 ---
 
@@ -259,7 +265,7 @@ contradictions and suggest improvements.
 | `.pdf` | `python scripts/extract.py raw/file.pdf` |
 | `.html` | `python scripts/extract.py raw/file.html` |
 | Web URL | `python scripts/extract.py https://...` |
-| `.png`, `.jpg`, `.jpeg`, `.webp` | Read directly (Claude vision) |
+| `.png`, `.jpg`, `.jpeg`, `.webp` | Read directly (Claude Code vision only) |
 
 ## Acknowledgments
 
