@@ -8,11 +8,17 @@ _No sources ingested yet._
 
 ## Entities
 
-_No entity pages yet._
+- [[ollama]] — Local LLM inference server
+- [[claude-code]] — AI-powered development assistant
+- [[environment-variables]] — System configuration variables
+- [[ollama-claude-code-setup]] — Offline configuration guide
 
 ## Concepts
 
-_No concept pages yet._
+- Local AI inference
+- Offline development
+- Model management
+- Environment configuration
 
 ## Maps
 
