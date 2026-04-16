@@ -21,3 +21,14 @@ All notes cross-linked with wikilinks for navigation.
 
 Updated [[environment-variables]] with proper Windows CMD `setx` commands for persistent environment variables.
 ## [2026-04-11] updated | log
+
+## [2026-04-15] restructure | PARA folder structure adopted
+
+Renamed wiki/ → brain/, raw/ → inbox/. Adopted PARA subfolders (projects, areas, resources, archive).
+Dropped YAML frontmatter in favour of clean note format: # Title + > Created: date + prose.
+Updated CLAUDE.md and ModelfileKB to reflect new structure.
+
+## [2026-04-15] ingest | Mobile app icons workflow
+
+- [[mobile-app-icons]] — SVG → PNG export + flutter_launcher_icons generation steps.
+- [[flutter-launcher-icons]] — Package reference.
